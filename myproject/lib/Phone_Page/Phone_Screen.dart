@@ -1,7 +1,10 @@
-import 'package:flutter/gestures.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:flutter/material.dart';
+// ignore: depend_on_referenced_packages
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/services.dart'; // Pour les validateurs
+import 'package:flutter/services.dart';
+import 'package:myproject/Phone_Page/code_verification.dart'; // Pour les validateurs
 
 class PhoneNumberPage extends StatefulWidget {
   const PhoneNumberPage({super.key});
@@ -12,8 +15,36 @@ class PhoneNumberPage extends StatefulWidget {
 
 class _PhoneNumberPageState extends State<PhoneNumberPage> {
   final _formKey = GlobalKey<FormState>();
-  final _textController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final _focusNode = FocusNode();
+  
+  void sendCode() async {
+    String phone = '+213${_phoneController.text.trim()}';
+
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phone,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        // Auto login possible ici
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur: ${e.message}')));
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CodeVerificationPage(
+              verificationId: verificationId,
+              phoneNumber: phone,
+            ),
+          ),
+        );
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {},
+    );
+  }
 
   @override
   void initState() {
@@ -22,7 +53,7 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
 
   @override
   void dispose() {
-    _textController.dispose();
+    _phoneController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -84,8 +115,8 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                             padding: const EdgeInsets.only(left: 5),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                'https://img.icons8.com/?size=100&id=ohQGuW5WrzUc&format=png&color=000000',
+                              child: Image.asset(
+                                'assets/images/iconAlg.png',
                                 width: 45,
                                 height: 200,
                                 fit: BoxFit.cover,
@@ -102,13 +133,12 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                               child: Form( // ✅ Ajout du widget Form
                                 key: _formKey,
                                 child: TextFormField(
-                                  controller: _textController,
+                                  controller: _phoneController,
                                   focusNode: _focusNode,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(10),
-                                    StartingZeroFormatter(),
+                                    LengthLimitingTextInputFormatter(9),
                                   ],
                                   decoration: InputDecoration(
                                     hintText: 'Entrez votre numéro',
@@ -128,11 +158,8 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                                     if (value == null || value.isEmpty) {
                                       return 'Veuillez entrer un numéro';
                                     }
-                                    if (value.length != 10) {
-                                      return 'Le numéro doit contenir 10 chiffres';
-                                    }
-                                    if (!value.startsWith('0')) {
-                                      return 'Le numéro doit commencer par 0';
+                                    if (value.length != 9) {
+                                      return 'Le numéro doit contenir 9 chiffres';
                                     }
                                     return null;
                                   },
@@ -148,17 +175,16 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                   
 
                   // Bouton d'envoi
-                  ElevatedButton(
+                Padding(
+                  padding: EdgeInsets.fromLTRB(50, 0, 50, 0),
+                  child: ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        // Numéro valide, faire quelque chose
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Numéro valide: ${_textController.text}')),
-                        );
+                        sendCode();
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
+                      backgroundColor:  Color(0xFF09183F),
                       elevation: 0,
                     ),
                     child: Text(
@@ -166,11 +192,13 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: Colors.white,
                         decoration: TextDecoration.underline,
                       ),
                     ),
                   ),
+                ),
+                  
                 ],
               ),
 
@@ -196,19 +224,3 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
     );
   }
 }
-
-
-  // Valideur personnalisé : commence par 0
-  class StartingZeroFormatter extends TextInputFormatter {
-    @override
-    TextEditingValue formatEditUpdate(
-        TextEditingValue oldValue, TextEditingValue newValue) {
-      final newText = newValue.text;
-
-      if (newText.isEmpty ||
-          (newText.startsWith('0') && RegExp(r'^\d*$').hasMatch(newText))) {
-        return newValue;
-      }
-      return oldValue;
-    }
-  }

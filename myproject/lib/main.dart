@@ -1,9 +1,14 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 // ignore: depend_on_referenced_packages
 import 'package:google_fonts/google_fonts.dart';
+import 'package:myproject/Inscrimption_Screen/inscription_widget.dart';
 import 'package:myproject/Phone_Page/Phone_Screen.dart';
-
-void main() {
+import 'package:myproject/Profil_Screen/Autorisation.dart';
+import 'package:myproject/Profil_Screen/Home_Screen.dart';
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 

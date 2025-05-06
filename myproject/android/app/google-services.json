@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "320437674855",
+    "project_id": "vroom-2a5f2",
+    "storage_bucket": "vroom-2a5f2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:320437674855:android:ec7044dcebb2bedefd85c2",
+        "android_client_info": {
+          "package_name": "com.example.myproject"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "320437674855-t9qdkuoqj4cnr1qt551omfjdt59hnuqq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.myproject",
+            "certificate_hash": "1e8b058ed154acbf9da35c793a0cd3f466fc9edc"
+          }
+        },
+        {
+          "client_id": "320437674855-e2590vglm3mdnp815vqbhbs3ndut2q0a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgpQei8LWcKex4n8UBVCmaw-Dn4AuYokg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "320437674855-e2590vglm3mdnp815vqbhbs3ndut2q0a.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "320437674855-7cukfvr88bi8ufmehj01ksib44cn5fpj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.myproject"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
