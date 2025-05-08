@@ -14,11 +14,12 @@ class PhoneNumberPage extends StatefulWidget {
 }
 
 class _PhoneNumberPageState extends State<PhoneNumberPage> {
+  bool _isButtonDisabled = false;
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _phoneController = TextEditingController();
   final _focusNode = FocusNode();
   
-  void sendCode() async {
+  Future sendCode() async {
     String phone = '+213${_phoneController.text.trim()}';
 
     await FirebaseAuth.instance.verifyPhoneNumber(
@@ -178,13 +179,18 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                 Padding(
                   padding: EdgeInsets.fromLTRB(50, 0, 50, 0),
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        sendCode();
-                      }
-                    },
+                    onPressed: _isButtonDisabled
+                        ? null // Bouton désactivé après le clic
+                        : () {
+                            if (_formKey.currentState!.validate()) {
+                              setState(() {
+                                _isButtonDisabled = true; // Désactive le bouton après le clic
+                              });
+                              sendCode(); // Appelle ta fonction sans reactive le bouton
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:  Color(0xFF09183F),
+                      backgroundColor: Color(0xFF09183F),
                       elevation: 0,
                     ),
                     child: Text(
@@ -193,11 +199,10 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        decoration: TextDecoration.underline,
                       ),
                     ),
                   ),
-                ),
+                )
                   
                 ],
               ),

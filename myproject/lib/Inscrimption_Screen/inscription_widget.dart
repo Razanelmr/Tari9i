@@ -6,7 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InscriptionWidget extends StatefulWidget {
-  const InscriptionWidget({super.key});
+  String phoneNumber;
+  InscriptionWidget({Key? key, required this.phoneNumber}) : super(key: key);
   static String routeName = 'inscription';
   static String routePath = '/inscription';
 
@@ -57,11 +58,7 @@ class _InscriptionWidgetState extends State<InscriptionWidget> {
 
 
         // Utilisateur trouvé → aller au profil
-      Navigator.pushReplacementNamed(
-        context,
-        AutoriseLocalisationWidget.routeName,
-        arguments: {'phoneNumber': phoneNumber},
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AutoriseLocalisationWidget(phoneNumber: phoneNumber,)));
 
 
 
@@ -75,9 +72,7 @@ class _InscriptionWidgetState extends State<InscriptionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic>? args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final String phoneNumber = args?['phoneNumber'] ?? '';
+    
 
     return GestureDetector(
       onTap: () {
@@ -274,7 +269,7 @@ class _InscriptionWidgetState extends State<InscriptionWidget> {
                       child: ElevatedButton(
                         onPressed: () {
                           if (_model.formKey.currentState!.validate()) {
-                            _submitForm(phoneNumber);
+                            _submitForm(widget.phoneNumber);
                           }
                         },
                         style: ElevatedButton.styleFrom(

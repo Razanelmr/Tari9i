@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeWidget extends StatefulWidget {
-  const HomeWidget({super.key});
-  static String routeName = 'Home';
+  String phoneNumber;
+  HomeWidget({Key? key, required this.phoneNumber}) : super(key: key); 
   static String routePath = '/home';
 
   @override
@@ -12,47 +13,66 @@ class HomeWidget extends StatefulWidget {
 }
 
 class _HomeWidgetState extends State<HomeWidget> {
+  late Future<void> _userDataFuture;
+  bool _isLoading = true;
+  dynamic _userData;
+  String _nom = '';
+  String _prenom = '';
+  String _email = '';
+  String _phone = '';
   
   late TextEditingController textController;
   late FocusNode textFieldFocusNode;
   String? choiceChipsValue; // État pour suivre la sélection
   final scaffoldKey = GlobalKey<ScaffoldState>();
   Color borderColor = Color(0xFF09183F);
-late Future<DocumentSnapshot?> userDataFuture;
+
   @override
   void initState() {
     super.initState();
+    _userDataFuture = fetchUserData();
     textController = TextEditingController();
     textFieldFocusNode = FocusNode();
     choiceChipsValue = 'Réservez Ultérieurement'; // Valeur initiale
-    final Map<String, dynamic>? args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-    final String phoneNumber = args?['phoneNumber'] ?? '';
-
-    // Charger les données dès l'initialisation
-    userDataFuture = getUserData(phoneNumber);
   }
 
-  // 🔍 Fonction corrigée pour récupérer les données
-  Future<DocumentSnapshot?> getUserData(String phoneNumber) async {
-    final DocumentReference userRef =
-        FirebaseFirestore.instance.collection('users').doc(phoneNumber);
-
+  Future<void> fetchUserData() async {
     try {
-      final DocumentSnapshot snapshot = await userRef.get();
+      final DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.phoneNumber)
+          .get();
 
-      if (snapshot.exists) {
-        return snapshot; // Retourne les données si le doc existe
+      if (mounted && userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>?;
+
+        setState(() {
+          _isLoading = false;
+          _userData = userData;
+          _nom = userData?['nom'] ?? 'Non défini';
+          _prenom = userData?['prenom'] ?? 'Non défini';
+          _email = userData?['email'] ?? 'Non défini';
+          _phone = userData?['phone'] ?? 'Non défini';
+        });
       } else {
-        return null; // Le document n'existe pas
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _userData = null;
+          });
+        }
       }
     } catch (e) {
-      print("Erreur lors de la récupération des données : $e");
-      return null;
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _userData = null;
+        });
+      }
+      print("Erreur lors du chargement des données utilisateur : $e");
     }
   }
-
 
 
   @override
@@ -76,7 +96,7 @@ late Future<DocumentSnapshot?> userDataFuture;
               width: 70.01,
               height: 70.01,
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: Color(0xFF09183F),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: Colors.white,
@@ -87,18 +107,31 @@ late Future<DocumentSnapshot?> userDataFuture;
                 padding: EdgeInsets.all(2),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(50),
-                  child: Image.network(
-                    'https://picsum.photos/seed/626/600',
-                    width: 323.3,
-                    height: 224.4,
-                    fit: BoxFit.cover,
+                  
+                  child: Container(
+                      width: 20,
+                      height: 20,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      // OR you can use borderRadius:
+                      // borderRadius: BorderRadius.circular(50), // half of width/height
+                    ),
+                    child: Center(
+                      child: Text(
+                        _nom.isNotEmpty ? _nom[0].toUpperCase() : ' ',
+                        style: TextStyle(
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
           title: Text(
-            'Hey Jenny',
+            _nom + ' ' + _prenom,
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -109,7 +142,7 @@ late Future<DocumentSnapshot?> userDataFuture;
             Padding(
               padding: EdgeInsetsDirectional.fromSTEB(0, 0, 4, 0),
               child: IconButton(
-                icon: Icon(Icons.settings, color: Colors.white),
+                icon: Icon(Icons.menu, color: Colors.white),
                 onPressed: () {},
               ),
             ),
@@ -117,258 +150,263 @@ late Future<DocumentSnapshot?> userDataFuture;
           centerTitle: false,
           elevation: 0,
         ),
-        body: FutureBuilder<DocumentSnapshot?>(
-        future: userDataFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text("Erreur : ${snapshot.error}"));
-          }
-
-          if (!snapshot.hasData || snapshot.data == null) {
-            return Center(child: Text("Aucun utilisateur trouvé."));
-          }
-
-          final userData = snapshot.data!.data() as Map<String, dynamic>;
-          final String nom = userData['nom'] ?? 'Non défini';
-          final String prenom = userData['prenom'] ?? 'Non défini';
-          final String email = userData['email'] ?? 'Non défini';
-          final String phoneNumber = userData['phone'] ?? 'Non défini';
-
-          return SafeArea(
+        body: SafeArea(
           top: true,
           child: CustomScrollView(
             slivers: [
               // Header container
-              SliverToBoxAdapter(
+              SliverPersistentHeader(
+                pinned: true,
+                floating: false,
+                delegate: _PinnedHeaderDelegate(
                 child: Container(
-                  width: double.infinity,
-                  height: 130,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF09183F),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(50),
-                      bottomRight: Radius.circular(50),
+                  color: Colors.grey[200],
+                  child: Container(
+                    width: double.infinity,
+                    height: 130,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF09183F),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(50),
+                        bottomRight: Radius.circular(50),
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      // Top Row: Phone and Points
-                      Padding(
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(35, 0,35, 0),
-                        child: Row(
-                          
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: Row(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        // Top Row: Phone and Points
+                        Padding(
+                          padding:
+                              const EdgeInsetsDirectional.fromSTEB(35, 0,35, 0),
+                          child: Row(
+                            
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.phone, color: Colors.white,size: 15,),
+                                    SizedBox(width: 15,),
+                                    Text(
+                                          _phone,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: Colors.white,
+                                                letterSpacing: 0.0,
+                                                fontFamily:
+                                                    GoogleFonts.inter().fontFamily,
+                                                fontSize: 15,
+                                              ),
+                                        ),
+                                  ],
+                                )
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  Icon(Icons.phone, color: Colors.white,size: 15,),
-                                  SizedBox(width: 15,),
+                                  IconButton(
+                                  icon: Icon(Icons.workspace_premium, color: Colors.white,
+                                  size: 15,
+                                  ),
+                                  onPressed: () {},
+                                  ),
                                   Text(
-                                        phoneNumber,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: Colors.white,
-                                              letterSpacing: 0.0,
-                                              fontFamily:
-                                                  GoogleFonts.inter().fontFamily,
-                                              fontSize: 15,
-                                            ),
-                                      ),
+                                    '0 Points',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          letterSpacing: 0.0,
+                                          fontFamily:
+                                              GoogleFonts.inter().fontFamily,
+                                          fontSize: 15
+                                        ),
+                                  ),
+                                  
                                 ],
                               )
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                icon: Icon(Icons.workspace_premium, color: Colors.white,
-                                size: 15,
-                                ),
-                                onPressed: () {},
-                                ),
-                                Text(
-                                  '0 Points',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: Colors.white,
-                                        letterSpacing: 0.0,
-                                        fontFamily:
-                                            GoogleFonts.inter().fontFamily,
-                                        fontSize: 15
-                                      ),
-                                ),
-                                
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                      // "Position Actuelle" Label
-                      Align(
-                        alignment: AlignmentDirectional.center,
-                        child: Padding(
-                          padding:
-                              const EdgeInsetsDirectional.fromSTEB(0, 10, 0, 10),
-                          child: Text(
-                            'Position Actuelle',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
-                                ?.copyWith(
-                                  color: const Color(0xFFCECCCC),
-                                  fontSize: 16,
-                                  letterSpacing: 0.0,
-                                  fontFamily:
-                                      GoogleFonts.inter().fontFamily,
-                                ),
+                            ],
                           ),
                         ),
-                      ),
-                      // Location Row
-                      Align(
-                        alignment: AlignmentDirectional.center,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.location_pin,
-                              color: Colors.white,
-                              size: 25,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Hello World',
+                    
+                        // "Position Actuelle" Label
+                        Align(
+                          alignment: AlignmentDirectional.center,
+                          child: Padding(
+                            padding:
+                                const EdgeInsetsDirectional.fromSTEB(0, 10, 0, 10),
+                            child: Text(
+                              'Position Actuelle',
                               style: Theme.of(context)
                                   .textTheme
-                                  .bodyMedium
+                                  .labelMedium
                                   ?.copyWith(
-                                    color: Colors.white,
+                                    color: const Color(0xFFCECCCC),
                                     fontSize: 16,
                                     letterSpacing: 0.0,
                                     fontFamily:
                                         GoogleFonts.inter().fontFamily,
                                   ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Reservation Title
-              SliverToBoxAdapter(
-                child: Align(
-                  alignment: AlignmentDirectional.center,
-                  child: Padding(
-                    padding:
-                        const EdgeInsetsDirectional.symmetric(vertical: 15),
-                    child: Text(
-                      'Reservation',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Color(0xFF09183F),
-                            fontSize: 25,
-                            letterSpacing: 0.0,
-                            fontFamily: GoogleFonts.anton().fontFamily,
                           ),
+                        ),
+                    
+                        // Location Row
+                        Align(
+                          alignment: AlignmentDirectional.center,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.location_pin,
+                                color: Colors.white,
+                                size: 25,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Hello World',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      letterSpacing: 0.0,
+                                      fontFamily:
+                                          GoogleFonts.inter().fontFamily,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
+              ),
+
+              // Reservation Title
+              SliverPersistentHeader(
+                pinned: true,
+                floating: false,
+                delegate: _PinnedHeaderDelegateTitle (
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                  ),
+                    child: Align(
+                      alignment: AlignmentDirectional.center,
+                      child: Padding(
+                        padding:
+                            const EdgeInsetsDirectional.symmetric(vertical: 10),
+                        child: Text(
+                          'Reservation',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: Color(0xFF09183F),
+                                fontSize: 25,
+                                letterSpacing: 0.0,
+                                fontFamily: GoogleFonts.anton().fontFamily,
+                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                ),
+              
 
               // ChoiceChips
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _ChoiceChipHeaderDelegate(
+                  child: Container(
+                    height: 50,
+                    color: Colors.grey[200],
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          ChoiceChip(
-                            label: Row(
-                              children: [
-                                Icon(Icons.access_time_rounded,
-                                    size: 16, color: Colors.white),
-                                SizedBox(width: 6),
-                                Text('Ultérieurement'),
-                              ],
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ChoiceChip(
+                                label: Row(
+                                  children: [
+                                  Icon(Icons.access_time_rounded,
+                                      size: 16, color: Colors.white),
+                                  SizedBox(width: 6),
+                                  Text('Ultérieurement'),
+                                ],
+                              ),
+                              selectedColor: Color(0xFF09183F),
+                              selected:
+                                  choiceChipsValue == 'Réservez Ultérieurement',
+                              onSelected: (_) {
+                                setState(() {
+                                  choiceChipsValue = 'Réservez Ultérieurement';
+                                });
+                              },
+                              labelStyle: TextStyle(
+                                color: choiceChipsValue ==
+                                        'Réservez Ultérieurement'
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                              backgroundColor: Colors.grey.shade300,
                             ),
-                            selectedColor: Color(0xFF09183F),
-                            selected:
-                                choiceChipsValue == 'Réservez Ultérieurement',
-                            onSelected: (_) {
-                              setState(() {
-                                choiceChipsValue = 'Réservez Ultérieurement';
-                              });
-                            },
-                            labelStyle: TextStyle(
-                              color: choiceChipsValue ==
-                                      'Réservez Ultérieurement'
-                                  ? Colors.white
-                                  : Colors.black,
+                            SizedBox(width: 8),
+                            ChoiceChip(
+                              label: Row(
+                                children: [
+                                  Icon(Icons.directions_car,
+                                      size: 16, color: Colors.white),
+                                  SizedBox(width: 6),
+                                  Text('Maintenant'),
+                                ],
+                              ),
+                              selectedColor: Color(0xFF09183F),
+                              selected:
+                                  choiceChipsValue == 'Réservez Maintenant',
+                              onSelected: (_) {
+                                setState(() {
+                                  choiceChipsValue = 'Réservez Maintenant';
+                                });
+                              },
+                              labelStyle: TextStyle(
+                                color:
+                                    choiceChipsValue == 'Réservez Maintenant'
+                                        ? Colors.white
+                                        : Colors.black,
+                              ),
+                              backgroundColor: Colors.grey.shade300,
                             ),
-                            backgroundColor: Colors.grey.shade300,
-                          ),
-                          SizedBox(width: 8),
-                          ChoiceChip(
-                            label: Row(
-                              children: [
-                                Icon(Icons.directions_car,
-                                    size: 16, color: Colors.white),
-                                SizedBox(width: 6),
-                                Text('Maintenant'),
-                              ],
-                            ),
-                            selectedColor: Color(0xFF09183F),
-                            selected:
-                                choiceChipsValue == 'Réservez Maintenant',
-                            onSelected: (_) {
-                              setState(() {
-                                choiceChipsValue = 'Réservez Maintenant';
-                              });
-                            },
-                            labelStyle: TextStyle(
-                              color:
-                                  choiceChipsValue == 'Réservez Maintenant'
-                                      ? Colors.white
-                                      : Colors.black,
-                            ),
-                            backgroundColor: Colors.grey.shade300,
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
+                                    ),
                   ),
                 ),
               ),
 
-              // Divider
-              SliverToBoxAdapter(
-                child: Divider(thickness: 1, color: Colors.grey.shade300),
-              ),
 
-              // Conditional Content
-              if (choiceChipsValue == 'Réservez Ultérieurement')
-                ...[
-                  SliverToBoxAdapter(
+
+              SliverPersistentHeader(
+            pinned: true,
+            delegate: _ChoiceChip(
+            child: Container(
+              height: 80,
+              color: Colors.grey[200],
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 5),
                       child: TextFormField(
                         controller: textController,
                         focusNode: textFieldFocusNode,
@@ -393,23 +431,27 @@ late Future<DocumentSnapshot?> userDataFuture;
                       ),
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Départ Pres de Chez Vous...',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Color(0xFF09183F),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+            ),
+              ),
+
+              // Divider après les chips
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _ChoiceChipHeader(
+            child: Container(
+              height: 5,
+              color: Colors.grey[200],
+              child : Divider(thickness: 1, color: Colors.grey.shade300),
+            )
+          ),
+          ),
+
+
+
+              // Conditional Content
+              if (choiceChipsValue == 'Réservez Ultérieurement')
+                ...[
+
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(0, 8, 0, 44),
                     sliver: SliverList(
@@ -434,11 +476,10 @@ late Future<DocumentSnapshot?> userDataFuture;
                 ),
             ],
           ),
-          );
-  }
-  )
-      ),
-    );
+          ),
+  ),
+  );
+
   }
 }
 
@@ -613,4 +654,135 @@ class FFButtonWidget extends StatelessWidget {
       child: Text(text),
     );
   }
+}
+
+class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _PinnedHeaderDelegate({required this.child});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => 130;
+
+  @override
+  double get minExtent => 130;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    return true;
+  }
+}
+
+
+class _PinnedHeaderDelegateTitle extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _PinnedHeaderDelegateTitle({required this.child});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => 50;
+
+  @override
+  double get minExtent => 50;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    return true;
+  }
+}
+
+
+// === Définition du HeaderDelegate pour SliverPersistentHeader ===
+class _ChoiceChipHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _ChoiceChipHeaderDelegate({required this.child});
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => 50; // Hauteur maximale du header
+
+  @override
+  double get minExtent => 50; // Hauteur minimale si réduit
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    return true;
+  }
+
+  @override
+  FloatingHeaderSnapConfiguration? get snapConfiguration =>
+      FloatingHeaderSnapConfiguration();
+}
+
+// === Définition du HeaderDelegate pour SliverPersistentHeader ===
+class _ChoiceChipHeader extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _ChoiceChipHeader({required this.child});
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => 5; // Hauteur maximale du header
+
+  @override
+  double get minExtent => 5; // Hauteur minimale si réduit
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    return true;
+  }
+
+  @override
+  FloatingHeaderSnapConfiguration? get snapConfiguration =>
+      FloatingHeaderSnapConfiguration();
+}
+
+
+// === Définition du HeaderDelegate pour SliverPersistentHeader ===
+class _ChoiceChip extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _ChoiceChip({required this.child});
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => 80; // Hauteur maximale du header
+
+  @override
+  double get minExtent => 80; // Hauteur minimale si réduit
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    return true;
+  }
+
+  @override
+  FloatingHeaderSnapConfiguration? get snapConfiguration =>
+      FloatingHeaderSnapConfiguration();
 }

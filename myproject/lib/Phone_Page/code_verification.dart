@@ -18,6 +18,7 @@ class CodeVerificationPage extends StatefulWidget {
 
 class _CodeVerificationPageState extends State<CodeVerificationPage> {
   final TextEditingController _codeController = TextEditingController();
+  bool _isButtonDisabled = false;
 
   Future<void> verifyCode() async {
   final credential = PhoneAuthProvider.credential(
@@ -40,18 +41,10 @@ class _CodeVerificationPageState extends State<CodeVerificationPage> {
 
     if (snapshot.docs.isNotEmpty) {
       // Utilisateur trouvé → aller au profil
-      Navigator.pushReplacementNamed(
-        context,
-        AutoriseLocalisationWidget.routeName,
-        arguments: {'phoneNumber': phoneNumber},
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AutoriseLocalisationWidget(phoneNumber: phoneNumber,)));
     } else {
       // Utilisateur non trouvé → aller à l'inscription
-      Navigator.pushReplacementNamed(
-        context,
-        InscriptionWidget.routeName,
-        arguments: {'phoneNumber': phoneNumber},
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => InscriptionWidget(phoneNumber: phoneNumber,)));
     }
 
   } catch (e) { 
@@ -133,7 +126,15 @@ class _CodeVerificationPageState extends State<CodeVerificationPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: verifyCode,
+                onPressed: _isButtonDisabled
+                        ? null // Bouton désactivé après le clic
+                        : () {
+                              setState(() {
+                                _isButtonDisabled = true; // Désactive le bouton après le clic
+                              });
+                              verifyCode(); // Appelle ta fonction sans reactive le bouton
+                          
+                          },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF09183F),
                   padding: EdgeInsets.symmetric(vertical: 14),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:myproject/Profil_Screen/Home_Screen.dart';
 
 class AutoriseLocalisationWidget extends StatefulWidget {
-  const AutoriseLocalisationWidget({super.key});
+  String phoneNumber;
+  
+  AutoriseLocalisationWidget({Key? key, required this.phoneNumber}) : super(key: key);
 
   static String routeName = 'AutoriseLocalisation';
   static String routePath = '/autoriseLocalisation';
@@ -18,9 +21,7 @@ class _AutoriseLocalisationWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic>? args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final String phoneNumber = args?['phoneNumber'] ?? '';
+    
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -84,11 +85,7 @@ class _AutoriseLocalisationWidgetState
                           const EdgeInsetsDirectional.fromSTEB(70, 30, 70, 0),
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pushReplacementNamed(
-                            context,
-                            AutoriseLocalisationWidget.routeName,
-                            arguments: {'phoneNumber': phoneNumber},
-                          );
+                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeWidget(phoneNumber: widget.phoneNumber,)));
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF09183F),

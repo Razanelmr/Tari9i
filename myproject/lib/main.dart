@@ -6,6 +6,7 @@ import 'package:myproject/Inscrimption_Screen/inscription_widget.dart';
 import 'package:myproject/Phone_Page/Phone_Screen.dart';
 import 'package:myproject/Profil_Screen/Autorisation.dart';
 import 'package:myproject/Profil_Screen/Home_Screen.dart';
+import 'package:myproject/test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -93,7 +94,7 @@ class _HomePageState extends State<HomePage> {
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const PhoneNumberPage()),
+                      MaterialPageRoute(builder: (context) => HomeWidget(phoneNumber: '+213558094661',)),
                     );
                   },
                   style: ElevatedButton.styleFrom(
