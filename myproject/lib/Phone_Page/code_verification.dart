@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:myproject/Inscrimption_Screen/inscription_widget.dart';
-import 'package:myproject/Profil_Screen/Autorisation.dart';
 import 'package:myproject/Profil_Screen/Home_Screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CodeVerificationPage extends StatefulWidget {
   final String verificationId;
@@ -29,6 +29,10 @@ class _CodeVerificationPageState extends State<CodeVerificationPage> {
   try {
     // Connexion avec le code SMS
     await FirebaseAuth.instance.signInWithCredential(credential);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
+    await prefs.setString('phoneNumber', widget.phoneNumber);
+
 
     final String phoneNumber = widget.phoneNumber;
 
@@ -41,7 +45,7 @@ class _CodeVerificationPageState extends State<CodeVerificationPage> {
 
     if (snapshot.docs.isNotEmpty) {
       // Utilisateur trouvé → aller au profil
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AutoriseLocalisationWidget(phoneNumber: phoneNumber,)));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeWidget(phoneNumber: phoneNumber,)));
     } else {
       // Utilisateur non trouvé → aller à l'inscription
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => InscriptionWidget(phoneNumber: phoneNumber,)));

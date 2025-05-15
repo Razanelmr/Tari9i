@@ -1,5 +1,5 @@
 import 'package:myproject/Phone_Page/code_verification.dart';
-import 'package:myproject/Profil_Screen/Autorisation.dart';
+import 'package:myproject/Profil_Screen/Home_Screen.dart';
 import 'package:myproject/models/inscription_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -58,7 +58,7 @@ class _InscriptionWidgetState extends State<InscriptionWidget> {
 
 
         // Utilisateur trouvé → aller au profil
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AutoriseLocalisationWidget(phoneNumber: phoneNumber,)));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeWidget(phoneNumber: phoneNumber,)));
 
 
 

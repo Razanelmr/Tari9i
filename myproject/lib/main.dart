@@ -2,19 +2,29 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 // ignore: depend_on_referenced_packages
 import 'package:google_fonts/google_fonts.dart';
-import 'package:myproject/Inscrimption_Screen/inscription_widget.dart';
 import 'package:myproject/Phone_Page/Phone_Screen.dart';
-import 'package:myproject/Profil_Screen/Autorisation.dart';
 import 'package:myproject/Profil_Screen/Home_Screen.dart';
-import 'package:myproject/test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(const MyApp());
+
+
+  final prefs = await SharedPreferences.getInstance();
+  final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+  final phoneNumber = prefs.getString('phoneNumber');
+
+
+  runApp(MyApp(isLoggedIn: isLoggedIn,  phoneNumber: phoneNumber,));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  final String? phoneNumber;
+
+  const MyApp({super.key, required this.isLoggedIn ,required this.phoneNumber});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -23,7 +33,9 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const HomePage(),
+      home: isLoggedIn && phoneNumber != null
+          ? HomeWidget(phoneNumber: phoneNumber!)
+          : HomePage(),
     );
   }
 }
@@ -94,7 +106,7 @@ class _HomePageState extends State<HomePage> {
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => HomeWidget(phoneNumber: '+213558094661',)),
+                      MaterialPageRoute(builder: (context) => PhoneNumberPage()),
                     );
                   },
                   style: ElevatedButton.styleFrom(

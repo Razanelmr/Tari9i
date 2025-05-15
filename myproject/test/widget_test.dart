@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:myproject/main.dart';
+import 'package:myproject/Phone_Page/Phone_Screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('HomePage affiche le bouton Suivant et navigue vers PhoneNumberPage',
+      (WidgetTester tester) async {
+    // Créer l'application avec isLoggedIn = false
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MyApp(isLoggedIn: false, phoneNumber: null),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Vérifie que le texte "Vroom" est présent
+    expect(find.text('Vroom'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Vérifie que le bouton "Suivant" est présent
+    expect(find.text('Suivant'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Clique sur le bouton
+    await tester.tap(find.text('Suivant'));
+    await tester.pumpAndSettle(); // attendre que la navigation se fasse
+
+    // Vérifie qu'on est bien sur PhoneNumberPage
+    expect(find.byType(PhoneNumberPage), findsOneWidget);
   });
 }
