@@ -1,10 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:myproject/Profil_Screen/ModificationProfil.dart';
+import 'package:myproject/Profil_Screen/ReservationsPage.dart';
 
 
 class MenuPage extends StatefulWidget {
-  const MenuPage({super.key});
+  final String userId;
+
+  const MenuPage({super.key, required this.userId});
 
   static String routeName = 'HomePage';
   static String routePath = '/homePage';
@@ -52,7 +55,7 @@ class _MenuPageState extends State<MenuPage> {
     InkWell(
       onTap: () {
         // Action à exécuter quand on clique sur "MON PROFIL"
-        Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilPageMod()));
+        Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilPageMod(userId : widget.userId)));
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -110,7 +113,8 @@ class _MenuPageState extends State<MenuPage> {
     // RESERVATION ULTERIEUREMENT
     InkWell(
       onTap: () {
-        
+        // Action à exécuter quand on clique sur "MON PROFIL"
+        Navigator.push(context, MaterialPageRoute(builder: (_) => ReservationsPage(userId : widget.userId)));
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),

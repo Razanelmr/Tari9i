@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:myproject/Phone_Page/code_verification.dart';
 import 'package:myproject/Profil_Screen/Home_Screen.dart';
 import 'package:myproject/models/inscription_model.dart';
@@ -6,8 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InscriptionWidget extends StatefulWidget {
+  String userId;
   String phoneNumber;
-  InscriptionWidget({Key? key, required this.phoneNumber}) : super(key: key);
+  InscriptionWidget({Key? key, required this.userId, required this.phoneNumber}) : super(key: key);
   static String routeName = 'inscription';
   static String routePath = '/inscription';
 
@@ -35,18 +37,18 @@ class _InscriptionWidgetState extends State<InscriptionWidget> {
     super.dispose();
   }
 
-  Future<void> _submitForm(String phoneNumber) async {
+  Future<void> _submitForm(String userId ) async {
     if (_model.validate()) {
       try {
         await FirebaseFirestore.instance
             .collection('users')
-            .doc(phoneNumber)
+            .doc(FirebaseAuth.instance.currentUser!.uid)
             .set({
           'nom': _model.nom,
           'prenom': _model.prenom,
           'email': _model.email,
           'date_naissance': _model.dateNaissance,
-          'phone': phoneNumber,
+          'phone': widget.phoneNumber,
           'created_at': FieldValue.serverTimestamp(),
         });
 
@@ -58,7 +60,7 @@ class _InscriptionWidgetState extends State<InscriptionWidget> {
 
 
         // Utilisateur trouvé → aller au profil
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeWidget(phoneNumber: phoneNumber,)));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeWidget(userId: widget.userId,)));
 
 
 
@@ -269,7 +271,7 @@ class _InscriptionWidgetState extends State<InscriptionWidget> {
                       child: ElevatedButton(
                         onPressed: () {
                           if (_model.formKey.currentState!.validate()) {
-                            _submitForm(widget.phoneNumber);
+                            _submitForm(widget.userId);
                           }
                         },
                         style: ElevatedButton.styleFrom(

@@ -2,19 +2,24 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:myproject/Profil_Screen/MenuPage.dart';
 import 'package:myproject/Profil_Screen/address_search_screen.dart';
+import 'package:myproject/Profil_Screen/covoiturage.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class HomeWidget extends StatefulWidget {
-  String phoneNumber;
-  HomeWidget({Key? key, required this.phoneNumber}) : super(key: key);
+  String userId;
+  HomeWidget({Key? key, required this.userId}) : super(key: key);
   static String routePath = '/home';
+
+  static const String routeName = '/HomeWidget'; // ✅ Ajout de la route nommée
 
   @override
   State<HomeWidget> createState() => _HomeWidgetState();
@@ -31,6 +36,7 @@ class _HomeWidgetState extends State<HomeWidget> {
   String _phone = '';
   late TextEditingController _departureController;
   late TextEditingController _destinationController;
+  
   late TextEditingController textController;
   late FocusNode textFieldFocusNode;
   String? choiceChipsValue; // État pour suivre la sélection
@@ -45,19 +51,58 @@ class _HomeWidgetState extends State<HomeWidget> {
   bool _waitingForDriver = false;
   int _tripPrice = 0;
 
+
+    late TextEditingController depart;
+    late TextEditingController destination;
+    late TextEditingController DateReservation;
+
+  late FocusNode _departFocusNode1;
+  late FocusNode _destinationFocusNode2;
+
+
+  int _count = 1; // Compteur initial
+
+  void _incrementCount() {
+    setState(() {
+      _count++;
+    });
+  }
+
+  void _decrementCount() {
+    if (_count > 0) {
+      setState(() {
+        _count--;
+      });
+    }
+  }
+
+
+
+
+
+
+
   @override
   void initState() {
     super.initState();
     _userDataFuture = fetchUserData();
     textController = TextEditingController();
     textFieldFocusNode = FocusNode();
-    choiceChipsValue = 'Réservez Maintenant';
+    choiceChipsValue = 'Réservez Ultérieurement';
     // Init controllers for departure & destination
     _departureController = TextEditingController(text: "Votre position actuelle");
     _destinationController = TextEditingController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _getCurrentLocation();
-    });
+
+    depart = TextEditingController();
+    _departFocusNode1 = FocusNode();
+
+    destination = TextEditingController();
+    _destinationFocusNode2 = FocusNode();
+
+    DateReservation = TextEditingController();
+
+
+
   }
 
   @override
@@ -65,6 +110,14 @@ class _HomeWidgetState extends State<HomeWidget> {
     _departureController.dispose();
     _destinationController.dispose();
     textFieldFocusNode.dispose();
+
+    depart.dispose();
+    _departFocusNode1.dispose();
+    destination.dispose();
+    _destinationFocusNode2.dispose();
+
+    DateReservation.dispose();
+
     super.dispose();
   }
 
@@ -112,9 +165,9 @@ Future<bool> _onWillPopScope(BuildContext context) async {
     try {
       final DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(widget.phoneNumber)
+          .doc(widget.userId)
           .get();
-      if (mounted && userDoc.exists) {
+      if (userDoc.exists) {
         final userData = userDoc.data() as Map<String, dynamic>?;
         setState(() {
           _isLoading = false;
@@ -213,7 +266,7 @@ Future<bool> _onWillPopScope(BuildContext context) async {
                     context,
                     PageRouteBuilder(
                       transitionDuration: Duration(milliseconds: 400),
-                      pageBuilder: (_, __, ___) => MenuPage(),
+                      pageBuilder: (_, __, ___) => MenuPage(userId: widget.userId,),
                       transitionsBuilder: (_, animation, __, child) {
                         return SlideTransition(
                           position: Tween<Offset>(
@@ -323,7 +376,7 @@ Future<bool> _onWillPopScope(BuildContext context) async {
                     child: Align(
                       alignment: AlignmentDirectional.center,
                       child: Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(vertical: 10),
+                        padding: const EdgeInsetsDirectional.symmetric(vertical: 5, horizontal: 10),
                         child: Text(
                           'Reservation',
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -339,50 +392,18 @@ Future<bool> _onWillPopScope(BuildContext context) async {
                 ),
               ),
               SliverPersistentHeader(
-                pinned: true,
+                pinned: false,
                 delegate: _ChoiceChipHeaderDelegate(
                   child: Container(
                     height: 50,
                     color: Colors.white,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                      child: Row(
+                    child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
                               ChoiceChip(
-                                label: Row(
-                                  children: [
-                                    Icon(Icons.directions_car, size: 16, color: Color(0xFF09183F)),
-                                    SizedBox(width: 6),
-                                    Text('Maintenant'),
-                                  ],
-                                ),
-                                selectedColor: Color(0xFF09183F),
-                                selected: choiceChipsValue == 'Réservez Maintenant',
-                                onSelected: (_) {
-                                  setState(() {
-                                    choiceChipsValue = 'Réservez Maintenant';
-                                  });
-                                },
-                                labelStyle: TextStyle(
-                                  color: choiceChipsValue == 'Réservez Maintenant'
-                                      ? Colors.white
-                                      : Colors.black,
-                                ),
-                                backgroundColor: Color.fromARGB(255, 243, 243, 243),
-                              ),
-                              SizedBox(width: 8),
-                              ChoiceChip(
-                                label: Row(
-                                  children: [
-                                    Icon(Icons.access_time_rounded, size: 16, color: Color(0xFF09183F)),
-                                    SizedBox(width: 6),
-                                    Text('Ultérieurement'),
-                                  ],
-                                ),
+                                label:
+                                    Text('Ultérieurement',style: TextStyle(fontSize: 10),),
+                                  
                                 selectedColor: Color(0xFF09183F),
                                 selected: choiceChipsValue == 'Réservez Ultérieurement',
                                 onSelected: (_) {
@@ -397,14 +418,31 @@ Future<bool> _onWillPopScope(BuildContext context) async {
                                 ),
                                 backgroundColor: const Color.fromARGB(255, 243, 243, 243),
                               ),
+                              SizedBox(width: 8),
+                              ChoiceChip(
+                                label: 
+                                    Text('Maintenant', style: TextStyle(fontSize: 10),),
+
+                                selectedColor: Color(0xFF09183F),
+                                selected: choiceChipsValue == 'Réservez Maintenant',
+                                onSelected: (_) {
+                                  setState(() {
+                                    choiceChipsValue = 'Réservez Maintenant';
+                                  });
+                                },
+                                labelStyle: TextStyle(
+                                  color: choiceChipsValue == 'Réservez Maintenant'
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
+                                backgroundColor: Color.fromARGB(255, 243, 243, 243),
+                              ),
                             ],
                           ),
-                        ],
-                      ),
                     ),
                   ),
                 ),
-              ),
+              
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _ChoiceChipHeader(
@@ -415,51 +453,14 @@ Future<bool> _onWillPopScope(BuildContext context) async {
                   ),
                 ),
               ),
+
+
               if (choiceChipsValue == 'Réservez Ultérieurement')
                 ...[
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _ChoiceChip(
-                      child: Container(
-                        height: 80,
-                        color: Colors.white,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-                          child: TextFormField(
-                            controller: textController,
-                            focusNode: textFieldFocusNode,
-                            decoration: InputDecoration(
-                              labelText: 'Cherchez annonce de départ...',
-                              suffixIcon: Icon(Icons.search),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: Color(0xFF09183F),
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: Color(0xFF09183F),
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(0, 8, 0, 44),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => TripCard(),
-                        childCount: 6,
-                      ),
-                    ),
-                  )
+                  SliverToBoxAdapter(
+                  child: SearchTrajet(userId : widget.userId),
+                ),
+                  
                 ]
               else
                 SliverToBoxAdapter(
@@ -472,7 +473,475 @@ Future<bool> _onWillPopScope(BuildContext context) async {
     );
   }
 
+
+Widget buildReserverUlterieur(BuildContext context) {
+  return GestureDetector(
+    onTap: () {
+      FocusScope.of(context).unfocus();
+      FocusManager.instance.primaryFocus?.unfocus();
+    },
+    child: Column(
+      mainAxisSize: MainAxisSize.max,
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+          child: Text(
+            'Où aimeriez-vous aller?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: GoogleFonts.anton().fontFamily,
+              fontSize: 20,
+              letterSpacing: 0.0,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Card(
+            clipBehavior: Clip.antiAliasWithSaveLayer,
+            color: const Color.fromARGB(19, 9, 24, 63),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Stack(
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(20, 20, 0, 0),
+                          child: Icon(
+                            Icons.circle_rounded,
+                            color: Color(0xFF09183F),
+                            size: 24,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
+                          child: Icon(
+                            Icons.keyboard_tab_sharp,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                            size: 24,
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding:
+                                const EdgeInsetsDirectional.fromSTEB(0, 20, 20, 0),
+                            child: SizedBox(
+                              width: 200,
+                              child: TextFormField(
+                                controller: depart,
+                                focusNode: _departFocusNode1,
+                                autofocus: false,
+                                obscureText: false,
+                                decoration: InputDecoration(
+                                  fillColor: Colors.white,
+                                  isDense: true,
+                                  labelStyle: TextStyle(
+                                    fontFamily: GoogleFonts.inter().fontFamily,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.normal,
+                                    color: Theme.of(context).hintColor,
+                                  ),
+                                  hintText: 'Départ',
+                                  hintStyle: TextStyle(
+                                    fontFamily: GoogleFonts.inter().fontFamily,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.normal,
+                                    color: Theme.of(context).hintColor,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: Colors.transparent,
+                                      width: 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: Colors.transparent,
+                                      width: 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Theme.of(context).colorScheme.error,
+                                      width: 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Theme.of(context).colorScheme.error,
+                                      width: 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  filled: true,
+                                ),
+                                style: TextStyle(
+                                  fontFamily: GoogleFonts.inter().fontFamily,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.normal,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.color,
+                                ),
+                                cursorColor: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.color,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(0, 70, 0, 20),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(20, 20, 0, 0),
+                            child: Icon(
+                              Icons.circle_rounded,
+                              color: Color(0xFF09183F),
+                              size: 24,
+                            ),
+                          ),
+                          Padding(
+                            padding:
+                                const EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
+                            child: Icon(
+                              Icons.keyboard_tab_sharp,
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.color,
+                              size: 24,
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsetsDirectional.fromSTEB(0, 20, 20, 0),
+                              child: SizedBox(
+                                width: 200,
+                                child: TextFormField(
+                                  controller: destination,
+                                  focusNode: _destinationFocusNode2,
+                                  autofocus: false,
+                                  obscureText: false,
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    labelStyle: TextStyle(
+                                      fontFamily: GoogleFonts.inter().fontFamily,
+                                      letterSpacing: 0.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Theme.of(context).hintColor,
+                                    ),
+                                    hintText: 'Destination',
+                                    hintStyle: TextStyle(
+                                      fontFamily: GoogleFonts.inter().fontFamily,
+                                      letterSpacing: 0.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Theme.of(context).hintColor,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: const BorderSide(
+                                        color: Colors.transparent,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: const BorderSide(
+                                        color: Colors.transparent,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    errorBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Theme.of(context).colorScheme.error,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Theme.of(context).colorScheme.error,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  style: TextStyle(
+                                    fontFamily: GoogleFonts.inter().fontFamily,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.normal,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color,
+                                  ),
+                                  cursorColor: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.color,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Align(
+                      alignment: const AlignmentDirectional(1, 0),
+                      child: Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(0, 55, 30, 0),
+                        child: IconButton(
+                          icon: const FaIcon(
+                            FontAwesomeIcons.longArrowAltDown,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFF09183F),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            fixedSize: const Size(40, 40),
+                          ),
+                          onPressed: () {
+                            print('IconButton pressed ...');
+                          },
+                        ),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsetsDirectional.fromSTEB(25, 55, 0, 0),
+                      child: FaIcon(
+                        FontAwesomeIcons.gripLinesVertical,
+                        color: Color(0xFF09183F),
+                        size: 40,
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding:
+                      const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 20),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      const Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(20, 0, 0, 0),
+                          child: Icon(
+                            Icons.calendar_today,
+                            color: Color(0xFF09183F),
+                            size: 24,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                          child: Icon(
+                            Icons.keyboard_tab_sharp,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                            size: 24,
+                          ),
+                        ),
+                      Expanded(
+                        child: Padding(
+                          padding:
+                              const EdgeInsetsDirectional.fromSTEB(0, 5, 20, 0),
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              
+                            ),
+                            child: TextFormField(
+                              controller: DateReservation,
+                              readOnly: true,
+                              onTap: () async {
+                                final DateTime? picked = await showDatePicker(
+                                  context: context,
+                                  initialDate:
+                                      DateTime.now().add(const Duration(days: 1)),
+                                  firstDate:
+                                      DateTime.now().add(const Duration(days: 1)),
+                                  lastDate:
+                                      DateTime.now().add(const Duration(days: 365)),
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: ThemeData.light().copyWith(
+                                        colorScheme: const ColorScheme.light(
+                                            primary: Color(0xFF09183F)),
+                                      ),
+                                      child: child!,
+                                    );
+                                  },
+                                );
+                                if (picked != null) {
+                                  DateReservation.text =
+                                      "${picked.toLocal()}".split(' ')[0];
+                                }
+                              },
+                              decoration: InputDecoration(
+                                    isDense: true,
+                                    labelStyle: TextStyle(
+                                      fontFamily: GoogleFonts.inter().fontFamily,
+                                      letterSpacing: 0.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Theme.of(context).hintColor,
+                                    ),
+                                    hintText: 'Date de reservation',
+                                    hintStyle: TextStyle(
+                                      fontFamily: GoogleFonts.inter().fontFamily,
+                                      letterSpacing: 0.0,
+                                      fontWeight: FontWeight.normal,
+                                      color: Theme.of(context).hintColor,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: const BorderSide(
+                                        color: Colors.transparent,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: const BorderSide(
+                                        color: Colors.transparent,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    errorBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Theme.of(context).colorScheme.error,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Theme.of(context).colorScheme.error,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Date requise';
+                                }
+                                final date = DateTime.tryParse(value);
+                                if (date == null ||
+                                    date.isBefore(DateTime.now())) {
+                                  return 'Veuillez choisir une date future';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: EdgeInsets.all(0),
+                  child: Column(
+                    children: [
+                      Text("Nombre de places que vous souhaitez réserver"),
+                      Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              onPressed: _decrementCount,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                shape: CircleBorder(),
+                              ),
+                              child: Icon(Icons.remove, color: Colors.white),
+                            ),
+                            SizedBox(width: 30),
+                            Text(
+                              '$_count',
+                              style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(width: 30),
+                            ElevatedButton(
+                              onPressed: _incrementCount,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF09183F),
+                                shape: CircleBorder(),
+                              ),
+                              child: Icon(Icons.add, color: Colors.white),
+                            ),
+                          ],
+                        ),
+
+                        
+                    ],
+                    
+                  ),
+                  ),
+                  
+                // Supprimé le duplicata de buildDatePicker ici
+              ],
+            ),
+          ),
+          
+        ),
+        Padding(
+                          padding: EdgeInsets.fromLTRB(30,0,30,0),
+                          child: ElevatedButton(
+                              onPressed: () {
+                                print('click');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF09183F),
+                                minimumSize: Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                "Rechercher",
+                                style: TextStyle(fontSize: 16, color: Colors.white),
+                              ),
+                            ),
+                          
+                          ),
+      ],
+    ),
+  );
+}
+
+
   Widget buildReserverMaintenant(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _getCurrentLocation();
+    });
     return Column(
       children: [
         SizedBox(
@@ -1122,146 +1591,6 @@ void _showPermissionPermanentlyDeniedDialog(BuildContext context) {
 }
 
 
-class TripCard extends StatelessWidget {
-  const TripCard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 8),
-      child: Container(
-        width: 100,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: Color(0xFF09183F),
-            width: 2,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 12),
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Color(0xFF09183F),
-                    width: 2,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(2),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      'assets/images/persone.png',
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'UV 01, Ali Mandjeli',
-                      textAlign: TextAlign.justify,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'chauffeur',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.normal,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                      Text(
-                      ' Point départ : ',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                      ),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.start_outlined,
-                          size: 15,
-                        ),
-                        Text(
-                        ' Sidi Mebrouk Superieur.',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                          color: Color(0xFF0D6552),
-                        ),
-                      ),
-                      ],
-                    ),
-                    
-                    Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        Icon(
-                          Icons.person_rounded,
-                          color: Colors.black54,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '2',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            '07:45am',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.normal,
-                            ),
-                          ),
-                        ),
-                        FFButtonWidget(
-                          onPressed: () {
-                            print('Button pressed ...');
-                          },
-                          text: 'Réservez',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-
-}
 
 //--- Custom Button Widget ---
 class FFButtonWidget extends StatelessWidget {

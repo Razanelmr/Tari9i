@@ -9,7 +9,7 @@ void main() {
     // Créer l'application avec isLoggedIn = false
     await tester.pumpWidget(
       const MaterialApp(
-        home: MyApp(isLoggedIn: false, phoneNumber: null),
+        home: MyApp(isLoggedIn: false, userId: null),
       ),
     );
 

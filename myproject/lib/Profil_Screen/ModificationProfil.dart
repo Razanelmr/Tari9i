@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ProfilPageMod extends StatefulWidget {
-  const ProfilPageMod({super.key});
+  final String userId;
+
+  const ProfilPageMod({super.key, required this.userId});
 
   static String routeName = 'ProfilPageMod';
   static String routePath = '/ProfilPageMod';
@@ -46,20 +48,10 @@ class _ProfilPageModState extends State<ProfilPageMod> {
   }
 
   Future<void> fetchUserData() async {
-    if (_phoneNumber == null) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _userData = null;
-        });
-      }
-      return;
-    }
-
     try {
       final DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(_phoneNumber)
+          .doc(widget.userId)
           .get();
 
       if (mounted && userDoc.exists) {
@@ -93,12 +85,10 @@ class _ProfilPageModState extends State<ProfilPageMod> {
   }
 
   Future<void> updateUserData(String field, String value) async {
-    if (_phoneNumber == null) return;
-
     try {
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(_phoneNumber!)
+          .doc(widget.userId)
           .update({field: value});
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -287,18 +277,22 @@ class _ProfilPageModState extends State<ProfilPageMod> {
         color: Colors.white,
         child: ElevatedButton(
           onPressed: () async {
+            
+
+
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('isLoggedIn', false);
+            prefs.remove('phoneNumber');
+
             // Action à effectuer lors du clic sur Déconnecter
             await FirebaseAuth.instance.signOut();
 
-            // Optionnel : afficher un message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Déconnecté avec succès')),
-            );
-            final prefs = await SharedPreferences.getInstance();
-            prefs.remove('phoneNumber');
-
             // Redirection vers la page de login
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => PhoneNumberPage()));
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => PhoneNumberPage()),
+              (Route<dynamic> route) => false,
+            );
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red.shade400,

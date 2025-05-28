@@ -64,6 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '320437674855',
     projectId: 'vroom-2a5f2',
     storageBucket: 'vroom-2a5f2.firebasestorage.app',
+    androidClientId: '320437674855-t9qdkuoqj4cnr1qt551omfjdt59hnuqq.apps.googleusercontent.com',
+    iosClientId: '320437674855-7cukfvr88bi8ufmehj01ksib44cn5fpj.apps.googleusercontent.com',
     iosBundleId: 'com.example.myproject',
   );
 
@@ -73,6 +75,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '320437674855',
     projectId: 'vroom-2a5f2',
     storageBucket: 'vroom-2a5f2.firebasestorage.app',
+    androidClientId: '320437674855-t9qdkuoqj4cnr1qt551omfjdt59hnuqq.apps.googleusercontent.com',
+    iosClientId: '320437674855-7cukfvr88bi8ufmehj01ksib44cn5fpj.apps.googleusercontent.com',
     iosBundleId: 'com.example.myproject',
   );
 

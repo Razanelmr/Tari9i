@@ -1,13 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:flutter/material.dart';
-// ignore: depend_on_referenced_packages
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
-import 'package:myproject/Phone_Page/code_verification.dart'; // Pour les validateurs
+import 'package:myproject/Phone_Page/code_verification.dart';
 
 class PhoneNumberPage extends StatefulWidget {
   const PhoneNumberPage({super.key});
+
+  static const String routeName = '/phonePage';
+  static const String routePath = '/phonePage';
 
   @override
   State<PhoneNumberPage> createState() => _PhoneNumberPageState();
@@ -18,38 +19,94 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _phoneController = TextEditingController();
   final _focusNode = FocusNode();
-  
-  Future sendCode() async {
+  DateTime? _lastClickTime;
+
+  Future<void> sendCode() async {
+    // Valider à nouveau le formulaire avant envoi
+    if (!_formKey.currentState!.validate()) return;
+
     String phone = '+213${_phoneController.text.trim()}';
 
-    await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: phone,
-      timeout: const Duration(seconds: 60),
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        // Auto login possible ici
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur: ${e.message}')));
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CodeVerificationPage(
-              verificationId: verificationId,
-              phoneNumber: phone,
+    
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phone,
+        timeout: const Duration(seconds: 30),
+        forceResendingToken: null,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await FirebaseAuth.instance.signInWithCredential(credential);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          String errorMessage = 'Erreur inconnue';
+
+          switch (e.code) {
+            case 'invalid-phone-number':
+              errorMessage = 'Numéro de téléphone invalide.';
+              break;
+            case 'quota-exceeded':
+              errorMessage = 'Trop de tentatives. Réessayez plus tard.';
+              break;
+            case 'network-request-failed':
+              errorMessage = 'Aucune connexion Internet détectée.';
+              break;
+            default:
+              errorMessage = e.message ?? 'Une erreur est survenue.';
+          }
+
+          Navigator.pop(context); // Fermer le loader
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          Navigator.pop(context); // Fermer le loader
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CodeVerificationPage(
+                verificationId: verificationId,
+                phoneNumber: phone,
+                
+              ),
             ),
-          ),
-        );
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {},
-    );
+          );
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          // Optional: Handle timeout
+          print('Auto retrieval timed out for $verificationId');
+        },
+      );
+    
   }
 
-  @override
-  void initState() {
-    super.initState();
+  void _onSendCodePressed() {
+    final now = DateTime.now();
+
+    // Protection contre les clics multiples rapides
+    if (_lastClickTime == null || now.difference(_lastClickTime!) > const Duration(seconds: 2)) {
+      _lastClickTime = now;
+
+      if (_formKey.currentState!.validate()) {
+        setState(() {
+          _isButtonDisabled = true;
+        });
+
+        // Afficher un loader
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(child: CircularProgressIndicator()),
+        );
+
+        sendCode().then((_) {
+          // Déjà géré dans sendCode()
+        }).catchError((error) {
+          setState(() {
+            _isButtonDisabled = false;
+          });
+        });
+      }
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Veuillez patienter...")));
+    }
   }
 
   @override
@@ -62,40 +119,32 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: Colors.white, // Primary background color
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Stack(
             children: [
-              // Main content
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                  'Bonjour..',
-                  textAlign: TextAlign.end,
-                  style: GoogleFonts.anton(
-                    fontSize: 45,
-                    color: const Color(0xFF09183F),
-                    fontWeight: FontWeight.w500,
+                  Text(
+                    'Bonjour..',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.anton(
+                      fontSize: 45,
+                      color: const Color(0xFF09183F),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                  ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Créez Votre Compte',
-                      style: GoogleFonts.roboto(
-                    fontSize: 19,
-                    color: Color(0x9509183F),
-                    fontWeight: FontWeight.normal,
-                  ),
+                  Text(
+                    'Entrez votre numéro de téléphone',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.roboto(
+                      fontSize: 19,
+                      color: const Color(0x9509183F),
+                      fontWeight: FontWeight.normal,
                     ),
                   ),
                   Padding(
@@ -103,7 +152,7 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                     child: Container(
                       height: 60,
                       decoration: BoxDecoration(
-                        color: Colors.white, // Secondary background
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: const Color(0xFF09183F),
@@ -119,7 +168,7 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                               child: Image.asset(
                                 'assets/images/iconAlg.png',
                                 width: 45,
-                                height: 200,
+                                height: 30,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -131,7 +180,7 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 5),
-                              child: Form( // ✅ Ajout du widget Form
+                              child: Form(
                                 key: _formKey,
                                 child: TextFormField(
                                   controller: _phoneController,
@@ -168,46 +217,34 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                               ),
                             ),
                           ),
-                        
                         ],
                       ),
                     ),
                   ),
-                  
-
-                  // Bouton d'envoi
-                Padding(
-                  padding: EdgeInsets.fromLTRB(50, 0, 50, 0),
-                  child: ElevatedButton(
-                    onPressed: _isButtonDisabled
-                        ? null // Bouton désactivé après le clic
-                        : () {
-                            if (_formKey.currentState!.validate()) {
-                              setState(() {
-                                _isButtonDisabled = true; // Désactive le bouton après le clic
-                              });
-                              sendCode(); // Appelle ta fonction sans reactive le bouton
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF09183F),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Envoyez le code',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 50),
+                    child: ElevatedButton(
+                      onPressed: _isButtonDisabled ? null : _onSendCodePressed,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF09183F),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        'Envoyez le code',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                )
-                  
                 ],
               ),
-
-              // Footer
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
